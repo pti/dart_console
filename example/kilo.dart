@@ -125,12 +125,12 @@ void editorInsertNewline() {
   cursorCol = 0;
 }
 
-void editorFindCallback(String query, Key key) {
+String? editorFindCallback(String query, Key key) {
   if (key.controlChar == ControlCharacter.enter ||
       key.controlChar == ControlCharacter.escape) {
     findLastMatchRow = -1;
     findDirection = FindDirection.forwards;
-    return;
+    return null;
   } else if (key.controlChar == ControlCharacter.arrowRight ||
       key.controlChar == ControlCharacter.arrowDown) {
     findDirection = FindDirection.forwards;
@@ -174,6 +174,8 @@ void editorFindCallback(String query, Key key) {
       }
     }
   }
+
+  return null;
 }
 
 void editorFind() {
@@ -434,7 +436,7 @@ void editorSetStatusMessage(String message) {
 }
 
 String? editorPrompt(String message,
-    [void Function(String text, Key lastPressed)? callback]) {
+    [String? Function(String text, Key lastPressed)? callback]) {
   final originalCursorRow = cursorRow;
 
   editorSetStatusMessage(message);

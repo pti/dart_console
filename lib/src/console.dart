@@ -556,7 +556,7 @@ class Console {
       {bool cancelOnBreak = false,
       bool cancelOnEscape = false,
       bool cancelOnEOF = false,
-      void Function(String text, Key lastPressed)? callback}) {
+      String? Function(String text, Key lastPressed)? callback}) {
     var buffer = '';
     var index = 0; // cursor position relative to buffer, not screen
 
@@ -672,7 +672,16 @@ class Console {
       write(buffer); // allow for backspace condition
       cursorPosition = Coordinate(screenRow, screenColOffset + index);
 
-      if (callback != null) callback(buffer, key);
+      if (callback != null) {
+        final left = buffer.substring(0, index);
+        final right = buffer.substring(index);
+
+        final leftReplacement = callback(left, key);
+        if (leftReplacement != null) {
+          index = leftReplacement.length;
+          buffer = leftReplacement + right;
+        }
+      }
     }
   }
 }
