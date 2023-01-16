@@ -125,7 +125,7 @@ void editorInsertNewline() {
   cursorCol = 0;
 }
 
-String? editorFindCallback(String query, Key key) {
+String? editorFindCallback(String query, String buffer, int index, Key key) {
   if (key.controlChar == ControlCharacter.enter ||
       key.controlChar == ControlCharacter.escape) {
     findLastMatchRow = -1;
@@ -436,7 +436,7 @@ void editorSetStatusMessage(String message) {
 }
 
 String? editorPrompt(String message,
-    [String? Function(String text, Key lastPressed)? callback]) {
+    [String? Function(String text, String buffer, int index, Key lastPressed)? callback]) {
   final originalCursorRow = cursorRow;
 
   editorSetStatusMessage(message);

@@ -14,7 +14,7 @@ String? completeCommand(String buffer) {
 }
 
 String? suggestedCompletion;
-String? completion(String text, Key lastPressed) {
+String? completion(String text, String buffer, int index, Key lastPressed) {
   if (lastPressed.isControl) {
     final completion = suggestedCompletion;
     suggestedCompletion = null;

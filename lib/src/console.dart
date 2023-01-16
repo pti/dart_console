@@ -556,7 +556,7 @@ class Console {
       {bool cancelOnBreak = false,
       bool cancelOnEscape = false,
       bool cancelOnEOF = false,
-      String? Function(String text, Key lastPressed)? callback}) {
+      String? Function(String text, String buffer, int index, Key lastPressed)? callback}) {
     var buffer = '';
     var index = 0; // cursor position relative to buffer, not screen
 
@@ -690,7 +690,7 @@ class Console {
         final left = buffer.substring(0, index);
         final right = buffer.substring(index);
 
-        final leftReplacement = callback(left, key);
+        final leftReplacement = callback(left, buffer, index, key);
         if (leftReplacement != null) {
           index = leftReplacement.length;
           buffer = leftReplacement + right;
