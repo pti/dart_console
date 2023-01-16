@@ -565,6 +565,12 @@ class Console {
 
     final bufferMaxLength = windowWidth - screenColOffset - 3;
 
+    int lastWordStart() {
+      final bufferLeftOfCursor = buffer.substring(0, index - 1);
+      final lastSpace = bufferLeftOfCursor.lastIndexOf(' ');
+      return lastSpace != -1 ? lastSpace + 1 : 0;
+    }
+
     while (true) {
       final key = readKey();
 
@@ -629,9 +635,7 @@ class Console {
             break;
           case ControlCharacter.wordLeft:
             if (index > 0) {
-              final bufferLeftOfCursor = buffer.substring(0, index - 1);
-              final lastSpace = bufferLeftOfCursor.lastIndexOf(' ');
-              index = lastSpace != -1 ? lastSpace + 1 : 0;
+              index = lastWordStart();
             }
             break;
           case ControlCharacter.wordRight:
@@ -641,6 +645,16 @@ class Console {
               index = nextSpace != -1
                   ? min(index + nextSpace + 2, buffer.length)
                   : buffer.length;
+            }
+            break;
+          case ControlCharacter.wordBackspace:
+            if (index > 0) {
+              // Erase characters between current cursor position and beginning of the word.
+              final wordStart = lastWordStart();
+              final before = buffer.substring(0, wordStart);
+              final after = buffer.substring(index);
+              buffer = before + after;
+              index = wordStart;
             }
             break;
           case ControlCharacter.home:
