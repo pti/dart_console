@@ -30,6 +30,10 @@ class Coordinate extends Point<int> {
   String toString() => '($row, $col)';
 }
 
+/// `buffer` specifies the current state of [Console.readLine]. The callback can modify the buffer
+/// (text and/or cursor index) by returning a non-null value.
+typedef ReadLineCallback = BufferState? Function(BufferState buffer, Key lastPressed);
+
 /// A representation of the current console window.
 ///
 /// Use the [Console] to get information about the current window and to read
@@ -556,8 +560,9 @@ class Console {
       {bool cancelOnBreak = false,
       bool cancelOnEscape = false,
       bool cancelOnEOF = false,
-      String? Function(String text, String buffer, int index, Key lastPressed)? callback}) {
+        ReadLineCallback? callback}) {
     var buffer = '';
+    var lastOutput = '';
     var index = 0; // cursor position relative to buffer, not screen
 
     final screenRow = cursorPosition!.row;
@@ -681,21 +686,64 @@ class Console {
         }
       }
 
-      cursorPosition = Coordinate(screenRow, screenColOffset);
-      eraseCursorToEnd();
-      write(buffer); // allow for backspace condition
-      cursorPosition = Coordinate(screenRow, screenColOffset + index);
+      String? output;
 
       if (callback != null) {
-        final left = buffer.substring(0, index);
-        final right = buffer.substring(index);
+        final replacement = callback(BufferState(buffer, index, null), key);
 
-        final leftReplacement = callback(left, buffer, index, key);
-        if (leftReplacement != null) {
-          index = leftReplacement.length;
-          buffer = leftReplacement + right;
+        if (replacement != null) {
+          index = replacement.index;
+          buffer = replacement.text;
+          output = replacement.output;
         }
       }
+
+      output ??= buffer;
+
+      if (output != lastOutput) {
+        final unchangedCount = output.commonPrefixLength(lastOutput);
+
+        if (output.length > lastOutput.length) {
+          // Only write the added characters.
+          cursorPosition = Coordinate(screenRow, screenColOffset + unchangedCount);
+
+        } else {
+          // Erase+write the part after the unchanged beginning.
+          cursorPosition = Coordinate(screenRow, screenColOffset + unchangedCount);
+          eraseCursorToEnd();
+        }
+
+        final changedPart = output.substring(unchangedCount);
+        if (changedPart.isNotEmpty) write(changedPart);
+      }
+
+      cursorPosition = Coordinate(screenRow, screenColOffset + index);
+      lastOutput = output;
     }
+  }
+}
+
+class BufferState {
+  final String text;
+  final int index;
+
+  /// If defined, then use this instead of the `text` to write line characters in [Console.readLine].
+  final String? output;
+
+  BufferState(this.text, this.index, [this.output]);
+}
+
+extension on String {
+  int commonPrefixLength(String other) {
+    final len = min(length, other.length);
+    if (len == 0) return 0;
+
+    for (var i = 0; i < len; i++) {
+      if (this[i] != other[i]) {
+        return i;
+      }
+    }
+
+    return len;
   }
 }

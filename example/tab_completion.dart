@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:dart_console/dart_console.dart';
+import 'package:dart_console/src/output_builder.dart';
 
 final console = Console.scrolling();
 
@@ -13,40 +16,32 @@ String? completeCommand(String buffer) {
   return null;
 }
 
-String? suggestedCompletion;
-String? completion(String text, String buffer, int index, Key lastPressed) {
-  if (lastPressed.isControl) {
-    final completion = suggestedCompletion;
-    suggestedCompletion = null;
-    if (lastPressed.controlChar == ControlCharacter.tab && completion != null) {
-      // Write remaining characters to the screen.
-      console.write(completion.substring(text.length));
-      // Let the `Console.readLine()` API know the replacement text.
-      return completion;
-    }
+BufferState? completion(BufferState buffer, Key lastPressed) {
+  // Start from index-1 in case currently at a space character position.
+  var wordStart = buffer.text.lastIndexOf(' ', max(buffer.index - 1, 0));
+  if (wordStart < buffer.index) wordStart += 1; // Skip the space.
+  final word = buffer.text.substring(wordStart, buffer.index);
+  final completed = completeCommand(word);
+
+  if (completed == null) {
     return null;
   }
 
-  final int prefixStart = text.lastIndexOf(' ');
-  var completion = completeCommand(text.substring(prefixStart + 1));
-  if (completion != null) {
-    if (prefixStart >= 0) {
-      completion = text.substring(0, prefixStart) + ' ' + completion;
-    }
-
-    suggestedCompletion = completion;
-
-    // Write the text that can be tab-completed in different color.
-    final old = console.cursorPosition;
-    console.setForegroundColor(ConsoleColor.brightWhite);
-    console.write(completion.substring(text.length));
-    console.cursorPosition = old;
-
-    // Reset color to what it used to be.
-    console.setForegroundColor(ConsoleColor.brightGreen);
+  if (lastPressed.isControl && lastPressed.controlChar == ControlCharacter.tab) {
+    final newIndex = wordStart + completed.length;
+    final newText = buffer.text.substring(0, wordStart) + completed + buffer.text.substring(buffer.index);
+    return BufferState(newText, newIndex);
   }
 
-  return null;
+  // Write the text that can be tab-completed in different color.
+  final output = OutputBuilder()
+    .write(buffer.text.substring(0, buffer.index))
+    .foreground(ConsoleColor.brightWhite)
+    .write(completed.substring(word.length))
+    .foreground(ConsoleColor.brightGreen)
+    .write(buffer.text.substring(buffer.index))
+    .toString();
+  return BufferState(buffer.text, buffer.index, output);
 }
 
 void main() {

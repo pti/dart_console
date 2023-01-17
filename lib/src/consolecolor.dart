@@ -7,26 +7,28 @@
 
 enum ConsoleColor {
   /// The named ANSI colors.
-  black('\x1b[30m', '\x1b[40m'),
-  red('\x1b[31m', '\x1b[41m'),
-  green('\x1b[32m', '\x1b[42m'),
-  yellow('\x1b[33m', '\x1b[43m'),
-  blue('\x1b[34m', '\x1b[44m'),
-  magenta('\x1b[35m', '\x1b[45m'),
-  cyan('\x1b[36m', '\x1b[46m'),
-  white('\x1b[37m', '\x1b[47m'),
-  brightBlack('\x1b[90m', '\x1b[100m'),
-  brightRed('\x1b[91m', '\x1b[101m'),
-  brightGreen('\x1b[92m', '\x1b[102m'),
-  brightYellow('\x1b[93m', '\x1b[103'),
-  brightBlue('\x1b[94m', '\x1b[104m'),
-  brightMagenta('\x1b[95m', '\x1b[105m'),
-  brightCyan('\x1b[96m', '\x1b[106m'),
-  brightWhite('\x1b[97m', '\x1b[107m');
+  black(30, 40),
+  red(31, 41),
+  green(32, 42),
+  yellow(33, 43),
+  blue(34, 44),
+  magenta(35, 45),
+  cyan(36, 46),
+  white(37, 47),
+  brightBlack(90, 100),
+  brightRed(91, 101),
+  brightGreen(92, 102),
+  brightYellow(93, 103),
+  brightBlue(94, 104),
+  brightMagenta(95, 105),
+  brightCyan(96, 106),
+  brightWhite(97, 107);
 
-  final String ansiSetForegroundColorSequence;
-  final String ansiSetBackgroundColorSequence;
+  final int foregroundCode;
+  final int backgroundCode;
 
-  const ConsoleColor(
-      this.ansiSetForegroundColorSequence, this.ansiSetBackgroundColorSequence);
+  const ConsoleColor(this.foregroundCode, this.backgroundCode);
+
+  String get ansiSetForegroundColorSequence => '\x1b[${foregroundCode}m';
+  String get ansiSetBackgroundColorSequence => '\x1b[${backgroundCode}m';
 }
