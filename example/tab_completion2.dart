@@ -9,10 +9,8 @@ void main() {
   c.writeLine('<ctrl+c>, <ctrl+d> or q exits');
 
   void ensureLineBelow() {
-    if (c.cursorPosition?.row == c.windowHeight - 1) {
-      c.writeLine();
-      c.cursorUp();
-    }
+    c.writeLine();
+    c.cursorUp();
   }
 
   void writeBelow(String text) {
@@ -79,7 +77,7 @@ void main() {
       ensureLineBelow();
       c.write(prompt);
 
-      final line = c.readLine(cancelOnBreak: false, cancelOnEOF: false, callback: callback)!;
+      final line = c.readLine(cancelOnBreak: false, cancelOnEOF: false, callback: callback, startColumn: prompt.length)!;
       c.eraseLine();
 
       if (line.toLowerCase() == 'q' || line.toLowerCase() == 'quit') {

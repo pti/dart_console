@@ -558,19 +558,30 @@ class Console {
   /// A callback function may be supplied, as a peek-ahead for what is being
   /// entered. This is intended for scenarios like auto-complete, where the
   /// text field is coupled with some other content.
-  String? readLine(
-      {bool cancelOnBreak = false,
-      bool cancelOnEscape = false,
-      bool cancelOnEOF = false,
-        ReadLineCallback? callback}) {
+  ///
+  /// The optional `startColumn` parameter defines the input start position
+  /// on the current line, usually equal to prompt length. When defined the
+  /// implementation doesn't need to read [cursorPosition] (which can be a bit
+  /// troublesome in case of simultaneous keyboard input).
+  String? readLine({
+    bool cancelOnBreak = false,
+    bool cancelOnEscape = false,
+    bool cancelOnEOF = false,
+    ReadLineCallback? callback,
+    int? startColumn,
+  }) {
     var buffer = '';
     var lastOutput = '';
     var index = 0; // cursor position relative to buffer, not screen
     var lastIndex = 0;
 
-    final screenColOffset = cursorPosition!.col;
-
-    final bufferMaxLength = windowWidth - screenColOffset - 3;
+    final screenColOffset = startColumn ?? cursorPosition?.col ?? 0;
+    final bufferMaxLength = windowWidth - screenColOffset - 1;
+    String setCursorLinePosition(int n) => ansiSetLineColumn(screenColOffset + n);
+    // If screenColOffset wouldn't be needed for bufferMaxLength, then ansiSaveCursorPosition
+    // and ansiRestoreCursorPosition could be used instead of screenColOffset in setCursorLinePosition().
+    // But saving&restoring cursor position shouldn't be the only option in case 'callback' uses
+    // saving&restoring itself (since terminals, or the tested one at least, only seem to remember 1 position).
 
     int lastWordStart() {
       final bufferLeftOfCursor = buffer.substring(0, index - 1);
@@ -720,7 +731,7 @@ class Console {
 
         // Hide cursor to reduce flickering.
         builder.write(ansiHideCursor);
-        builder.write(ansiSetLineColumn(screenColOffset + unchangedCount));
+        builder.write(setCursorLinePosition(unchangedCount));
 
         if (output.length < lastOutput.length) {
           // Erase characters after the unchanged beginning before writing the changed part.
@@ -732,7 +743,7 @@ class Console {
 
         // In case output contains control codes and output.length is greater than the number of visible characters,
         // move relative to the beginning rather than relative to current cursor position.
-        builder.write(ansiSetLineColumn(screenColOffset + index));
+        builder.write(setCursorLinePosition(index));
 
         builder.write(ansiShowCursor);
         write(builder.toString());
