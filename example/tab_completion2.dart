@@ -1,25 +1,12 @@
 import 'package:dart_console/dart_console.dart';
+import 'package:dart_console/src/ansi.dart';
 import 'package:dart_console/src/output_builder.dart';
 
 /// Prompts to read a line of text. Pressing tab iterates through matching words. Matching words are written to the
 /// line below the prompt.
 void main() {
-  final c = Console();
+  final c = Console.scrolling();
   c.writeLine('<ctrl+c>, <ctrl+d> or q exits');
-
-  Coordinate? markedPosition;
-  int? currentRow;
-
-  void markPosition() {
-    markedPosition = c.cursorPosition;
-  }
-
-  void restorePosition() {
-    if (markedPosition != null) {
-      c.cursorPosition = markedPosition;
-      markedPosition = null;
-    }
-  }
 
   void ensureLineBelow() {
     if (c.cursorPosition?.row == c.windowHeight - 1) {
@@ -29,11 +16,15 @@ void main() {
   }
 
   void writeBelow(String text) {
-    c.hideCursor();
-    c.cursorPosition = Coordinate(currentRow! + 1, 0);
-    c.eraseLine();
-    c.write(text);
-    c.showCursor();
+    c.write(OutputBuilder()
+      .write(ansiHideCursor)
+      .write(ansiSaveCursorPosition)
+      .write(ansiCursorNextLine())
+      .write(text)
+      .write(ansiEraseCursorToEnd)
+      .write(ansiRestoreCursorPosition)
+      .write(ansiShowCursor)
+      .toString());
   }
 
   String truncate(String text) {
@@ -51,14 +42,10 @@ void main() {
       throw BreakException(key.controlChar, buffer);
     }
 
-    markPosition();
-
     const completions = ['apple', 'avocado', 'banana', 'blueberry', 'cloudberry', 'lemon', 'lime', 'orange', 'peach', 'pear', 'pineapple', 'pomegranate', 'strawberry', 'watermelon'];
     final word = buffer.text.trim();
     final matching = suggestions ?? completions.where((name) => name.contains(word));
-    writeBelow(truncate(matching.join(', ')));
-    //writeBelow('text=${buffer.text} index=${buffer.index} key=$key');
-    restorePosition();
+    writeBelow(truncate(matching.join(', '))); // If there are no matching completions, the line below might need to be cleared.
 
     if (key.isControl && key.controlChar == ControlCharacter.tab && matching.isNotEmpty) {
       // Tab can be used to iterate through the matching suggestions.
@@ -89,14 +76,10 @@ void main() {
   while (true) {
     try {
       suggestions = null;
-      currentRow = c.cursorPosition?.row ?? 0;
       ensureLineBelow();
       c.write(prompt);
 
-      c.showCursor();
       final line = c.readLine(cancelOnBreak: false, cancelOnEOF: false, callback: callback)!;
-      c.hideCursor();
-
       c.eraseLine();
 
       if (line.toLowerCase() == 'q' || line.toLowerCase() == 'quit') {
@@ -108,7 +91,6 @@ void main() {
         final bg = 231 - colorIndex;
 
         c.write(OutputBuilder()
-            //.color(foreground: ConsoleColor.black, background: ConsoleColor.brightYellow)
             .color8bit(foreground: fg, background: bg)
             .write('Read')
             .color(background: ConsoleColor.black, foreground: ConsoleColor.brightWhite)

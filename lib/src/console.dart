@@ -6,6 +6,8 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:dart_console/src/output_builder.dart';
+
 import 'ffi/termlib.dart';
 import 'ffi/win/termlib_win.dart';
 
@@ -564,8 +566,8 @@ class Console {
     var buffer = '';
     var lastOutput = '';
     var index = 0; // cursor position relative to buffer, not screen
+    var lastIndex = 0;
 
-    final screenRow = cursorPosition!.row;
     final screenColOffset = cursorPosition!.col;
 
     final bufferMaxLength = windowWidth - screenColOffset - 3;
@@ -700,25 +702,44 @@ class Console {
 
       output ??= buffer;
 
-      if (output != lastOutput) {
+      final builder = OutputBuilder();
+
+      // Previously 'screenRow' was set before the while-loop. During the loop, the row could change (at least
+      // by resetting the terminal), and thus 'screenRow' became invalid and output was written on the wrong row.
+      // Instead of re-reading the cursor position here, only move relative to the current row. First move to the
+      // beginning of the line and then forward N characters.
+      // TODO not sure if all used control codes (ansiCursorHorizontalAbsolute) are Windows compatible...
+      if (output == lastOutput) {
+        write(ansiCursoMoveHorizontally(index - lastIndex));
+
+      } else if (output.length > lastOutput.length && output.startsWith(lastOutput)) {
+        write(output.substring(lastOutput.length));
+
+      } else {
         final unchangedCount = output.commonPrefixLength(lastOutput);
 
-        if (output.length > lastOutput.length) {
-          // Only write the added characters.
-          cursorPosition = Coordinate(screenRow, screenColOffset + unchangedCount);
+        // Hide cursor to reduce flickering.
+        builder.write(ansiHideCursor);
+        builder.write(ansiSetLineColumn(screenColOffset + unchangedCount));
 
-        } else {
-          // Erase+write the part after the unchanged beginning.
-          cursorPosition = Coordinate(screenRow, screenColOffset + unchangedCount);
-          eraseCursorToEnd();
+        if (output.length < lastOutput.length) {
+          // Erase characters after the unchanged beginning before writing the changed part.
+          builder.write(ansiEraseCursorToEnd);
         }
 
-        final changedPart = output.substring(unchangedCount);
-        if (changedPart.isNotEmpty) write(changedPart);
+        // Write the changed part.
+        builder.write(output.substring(unchangedCount));
+
+        // In case output contains control codes and output.length is greater than the number of visible characters,
+        // move relative to the beginning rather than relative to current cursor position.
+        builder.write(ansiSetLineColumn(screenColOffset + index));
+
+        builder.write(ansiShowCursor);
+        write(builder.toString());
       }
 
-      cursorPosition = Coordinate(screenRow, screenColOffset + index);
       lastOutput = output;
+      lastIndex = index;
     }
   }
 }

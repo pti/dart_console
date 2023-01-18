@@ -7,7 +7,7 @@ class OutputBuilder {
   OutputBuilder();
 
   OutputBuilder write(String str) {
-    buffer.write(str);
+    if (str.isNotEmpty) buffer.write(str);
     return this;
   }
 
