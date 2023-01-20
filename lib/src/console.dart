@@ -574,11 +574,15 @@ class Console {
     var lastOutput = '';
     var index = 0; // cursor position relative to buffer, not screen
     var lastIndex = 0;
+    var lastScrollOffset = 0;
 
     final screenColOffset = startColumn ?? cursorPosition?.col ?? 0;
-    final bufferMaxLength = windowWidth - screenColOffset - 1;
-    String setCursorLinePosition(int n) => ansiSetLineColumn(screenColOffset + n);
-    // If screenColOffset wouldn't be needed for bufferMaxLength, then ansiSaveCursorPosition
+    final maxVisibleLength = windowWidth - screenColOffset - 1; // -1: reserve space for the possible trailing cursor.
+
+    String setCursorLinePosition(int n) {
+      return ansiSetLineColumn(screenColOffset + n);
+    }
+    // If screenColOffset wouldn't be needed for maxVisibleLength, then ansiSaveCursorPosition
     // and ansiRestoreCursorPosition could be used instead of screenColOffset in setCursorLinePosition().
     // But saving&restoring cursor position shouldn't be the only option in case 'callback' uses
     // saving&restoring itself (since terminals, or the tested one at least, only seem to remember 1 position).
@@ -687,15 +691,12 @@ class Console {
             break;
         }
       } else {
-        if (buffer.length < bufferMaxLength) {
-          if (index == buffer.length) {
-            buffer += key.char;
-            index++;
-          } else {
-            buffer =
-                buffer.substring(0, index) + key.char + buffer.substring(index);
-            index++;
-          }
+        if (index == buffer.length) {
+          buffer += key.char;
+          index++;
+        } else {
+          buffer = buffer.substring(0, index) + key.char + buffer.substring(index);
+          index++;
         }
       }
 
@@ -720,33 +721,68 @@ class Console {
       // Instead of re-reading the cursor position here, only move relative to the current row. First move to the
       // beginning of the line and then forward N characters.
       // TODO not sure if all used control codes (ansiCursorHorizontalAbsolute) are Windows compatible...
-      if (output == lastOutput) {
-        write(ansiCursoMoveHorizontally(index - lastIndex));
 
-      } else if (output.length > lastOutput.length && output.startsWith(lastOutput)) {
-        write(output.substring(lastOutput.length));
+      if (output.length >= maxVisibleLength) {
+        // TODO support for output with ansi control codes (or at least colors),
+        //      i.e. visible output length differs from output.length. stripping control codes alone isn't enough
+        //      - one would need to always include the control codes (current use of substring() can leave those out
+        //      and then wrong colors might be used).
+        int scrollOffset;
 
-      } else {
-        final unchangedCount = output.commonPrefixLength(lastOutput);
+        if (index >= lastScrollOffset && index < (lastScrollOffset + maxVisibleLength) && index < output.length) {
+          // Don't move the scroll window when moving cursor within it.
+          scrollOffset = lastScrollOffset;
 
-        // Hide cursor to reduce flickering.
-        builder.write(ansiHideCursor);
-        builder.write(setCursorLinePosition(unchangedCount));
+        } else if (index < lastScrollOffset) {
+          // Moving to the beginning of the line, cursor defines the scroll window's left edge.
+          scrollOffset = index;
 
-        if (output.length < lastOutput.length) {
-          // Erase characters after the unchanged beginning before writing the changed part.
-          builder.write(ansiEraseCursorToEnd);
+        } else {
+          // Extending to the right. cursor defines the scroll window's right edge.
+          scrollOffset = max(0, index - maxVisibleLength);
         }
 
-        // Write the changed part.
-        builder.write(output.substring(unchangedCount));
+        write(builder
+            .write(ansiSetLineColumn(screenColOffset))
+            .write(ansiEraseCursorToEnd)
+            .write(output.substring(scrollOffset, min(scrollOffset + maxVisibleLength, output.length)))
+            .write(ansiSetLineColumn(screenColOffset + (index - scrollOffset)))
+            .toString());
+        lastScrollOffset = scrollOffset;
 
-        // In case output contains control codes and output.length is greater than the number of visible characters,
-        // move relative to the beginning rather than relative to current cursor position.
-        builder.write(setCursorLinePosition(index));
+      } else {
+        // If possible only output what is necessary == what has changed. Might be unnecessary as hide&showCursor
+        // seems to eliminate most of the flickering / unnecessary movement during line updates.
+        lastScrollOffset = 0;
 
-        builder.write(ansiShowCursor);
-        write(builder.toString());
+        if (output == lastOutput) {
+          write(ansiCursoMoveHorizontally(index - lastIndex));
+
+        } else if (output.length > lastOutput.length && output.startsWith(lastOutput) && index == output.length) {
+          write(output.substring(lastOutput.length));
+
+        } else {
+          final unchangedCount = output.commonPrefixLength(lastOutput);
+
+          // Hide cursor to reduce flickering.
+          builder.write(ansiHideCursor);
+          builder.write(setCursorLinePosition(unchangedCount));
+
+          if (output.length < lastOutput.length) {
+            // Erase characters after the unchanged beginning before writing the changed part.
+            builder.write(ansiEraseCursorToEnd);
+          }
+
+          // Write the changed part.
+          builder.write(output.substring(unchangedCount));
+
+          // In case output contains control codes and output.length is greater than the number of visible characters,
+          // move relative to the beginning rather than relative to current cursor position.
+          builder.write(setCursorLinePosition(index));
+
+          builder.write(ansiShowCursor);
+          write(builder.toString());
+        }
       }
 
       lastOutput = output;

@@ -78,3 +78,11 @@ String ansiSetTextStyles(
   if (strikethru) styles.add(9);
   return '\x1b[${styles.join(";")}m';
 }
+
+final _ansiControlCodePattern = RegExp(r'\x1b\[[0-9;?]+[a-zA-Z]');
+
+extension ExtraAnsiString on String {
+  String stripAnsiControlCodes() {
+    return replaceAll(_ansiControlCodePattern, '');
+  }
+}

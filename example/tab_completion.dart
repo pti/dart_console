@@ -45,12 +45,14 @@ BufferState? completion(BufferState buffer, Key lastPressed) {
 }
 
 void main() {
+  const prompt = '>>> ';
+
   while (true) {
     console.setForegroundColor(ConsoleColor.brightBlue);
-    console.write('>>> ');
+    console.write(prompt);
     console.resetColorAttributes();
     console.setForegroundColor(ConsoleColor.brightGreen);
-    final response = console.readLine(cancelOnEOF: true, callback: completion);
+    final response = console.readLine(cancelOnEOF: true, callback: completion, startColumn: prompt.length);
 
     if (response == null) break;
     print(response.toUpperCase());
