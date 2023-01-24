@@ -8,6 +8,7 @@
 
 const ansiDeviceStatusReportCursorPosition = '\x1b[6n';
 const ansiEraseInDisplayAll = '\x1b[2J';
+const ansiClearScrollbackBuffer = '\x1b[3J';
 const ansiEraseInLineAll = '\x1b[2K';
 const ansiEraseCursorToEnd = '\x1b[K';
 
@@ -79,7 +80,7 @@ String ansiSetTextStyles(
   return '\x1b[${styles.join(";")}m';
 }
 
-final _ansiControlCodePattern = RegExp(r'\x1b\[[0-9;?]+[a-zA-Z]');
+final _ansiControlCodePattern = RegExp(r'\x1b\[[0-9;?]*[a-zA-Z]');
 
 extension ExtraAnsiString on String {
   String stripAnsiControlCodes() {

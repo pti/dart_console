@@ -44,3 +44,5 @@ export 'src/scrollbackbuffer.dart';
 export 'src/string_utils.dart';
 export 'src/table.dart';
 export 'src/textalignment.dart';
+export 'src/output_builder.dart';
+export 'src/ansi.dart';

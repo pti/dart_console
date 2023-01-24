@@ -799,6 +799,23 @@ class BufferState {
   final String? output;
 
   BufferState(this.text, this.index, [this.output]);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BufferState &&
+          runtimeType == other.runtimeType &&
+          text == other.text &&
+          index == other.index &&
+          output == other.output;
+
+  @override
+  int get hashCode => text.hashCode ^ index.hashCode ^ output.hashCode;
+
+  @override
+  String toString() {
+    return 'BufferState{text: $text, index: $index, output: $output}';
+  }
 }
 
 extension on String {
