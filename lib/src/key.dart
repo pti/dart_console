@@ -77,6 +77,11 @@ class Key {
     isControl = true;
   }
 
+  Key.none() {
+    char = '';
+    isControl = false;
+  }
+
   @override
   String toString() => isControl ? controlChar.toString() : char.toString();
 }

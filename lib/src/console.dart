@@ -562,6 +562,9 @@ class Console {
   /// entered. This is intended for scenarios like auto-complete, where the
   /// text field is coupled with some other content.
   ///
+  /// The callback is called at the start to allow modifying the initial line
+  /// state. In this case the `key` argument is constructed with [Key.none].
+  ///
   /// The optional `startColumn` parameter defines the input start position
   /// on the current line, usually equal to prompt length. When defined the
   /// implementation doesn't need to read [cursorPosition] (which can be a bit
@@ -572,15 +575,30 @@ class Console {
     bool cancelOnEOF = false,
     ReadLineCallback? callback,
     int? startColumn,
+    String? initialInput,
   }) {
-    var buffer = '';
-    var lastOutput = '';
-    var index = 0; // cursor position relative to buffer, not screen
-    var lastIndex = 0;
-    var lastScrollOffset = 0;
+    var buffer = initialInput ?? '';
+    var index = buffer.length; // cursor position relative to buffer, not screen
 
     final screenColOffset = startColumn ?? cursorPosition?.col ?? 0;
     final maxVisibleLength = windowWidth - screenColOffset - 1; // -1: reserve space for the possible trailing cursor.
+
+    var initialOutput = buffer;
+
+    if (callback != null) {
+      final modified = callback(BufferState(buffer, index), Key.none());
+      buffer = modified?.text ?? buffer;
+      index = modified?.index ?? index;
+      initialOutput = modified?.output ?? buffer;
+    }
+
+    if (initialOutput.isNotEmpty) {
+      write(initialOutput);
+    }
+
+    var lastOutput = initialOutput;
+    var lastIndex = index;
+    var lastScrollOffset = 0;
 
     String setCursorLinePosition(int n) {
       return ansiSetLineColumn(screenColOffset + n);
