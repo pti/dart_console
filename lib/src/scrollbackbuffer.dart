@@ -6,14 +6,29 @@ class ScrollbackBuffer {
   int? lineIndex;
   String? currentLineBuffer;
   bool recordBlanks;
+  bool _enabled = true;
 
   // called by Console.scolling()
   ScrollbackBuffer({required this.recordBlanks});
+
+  void clear() {
+    lineList.clear();
+    lineIndex = 0;
+  }
+
+  /// When disabled, [add] calls are ignored;
+  void setEnabled(bool enabled) {
+    _enabled = enabled;
+  }
 
   /// Add a new line to the scrollback buffer. This would normally happen
   /// when the user finishes typing/editing the line and taps the 'enter'
   /// key.
   void add(String buffer) {
+    if (!_enabled) {
+      return;
+    }
+
     // don't add blank line to scrollback history if !recordBlanks
     if (buffer == '' && !recordBlanks) {
       return;

@@ -65,6 +65,9 @@ class Console {
   Console.scrolling({bool recordBlanks = true})
       : _scrollbackBuffer = ScrollbackBuffer(recordBlanks: recordBlanks);
 
+
+  ScrollbackBuffer? get scrollbackBuffer => _scrollbackBuffer;
+
   /// Enables or disables raw mode.
   ///
   /// There are a series of flags applied to a UNIX-like terminal that together
